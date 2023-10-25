@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-app
+
+  Sample SAM Template for sam-app
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 300
+
+Resources:
+  # Input and output buckets
+  InputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+
+  TestInputBucket:
+    Type: AWS::S3::Bucket
+
+  OutputBucket:
+    Type: AWS::S3::Bucket
+
+  # The lambda function called in response to events on the input bucket.
+  # This is the core of the exmaple.
+  EventNotificationsDedpue:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: notification_function
+      CodeUri: endedupe/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          OUTPUT_BUCKET: !Ref OutputBucket
+          DDB_TABLE: !Ref LockTable
+          COORDINATION: "on"
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref InputBucket
+        - S3ReadPolicy:
+            BucketName: !Ref TestInputBucket
+        - S3WritePolicy:
+            BucketName: !Ref OutputBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LockTable
+
+  # EventBridge Rule to match created objects in the input bucket and trigger our notification function
+  EventBridgeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - "Object Created"
+        detail:
+          bucket:
+            name:
+              - !Ref InputBucket
+      Targets:
+        - Id: SampleEventHandler
+          Arn: !GetAtt
+            - "EventNotificationsDedpue"
+            - "Arn"
+
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref "EventNotificationsDedpue"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt
+          - "EventBridgeRule"
+          - "Arn"
+
+  LockTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: s3key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: s3key
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+Outputs:
+  OutputBucketName:
+    Description: Bucket name of the output bucket
+    Value: !Ref OutputBucket
+  InputBucketName:
+    Description: Bucket name of the input bucket
+    Value: !Ref InputBucket
+  TestInputBucketName:
+    Description: Bucket name of the test input bucket.  No event rules are configured for this bucket.
+    Value: !Ref TestInputBucket
+  LockTableName:
+    Description: Name of the lock table
+    Value: !Ref LockTable
