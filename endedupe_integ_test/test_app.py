@@ -22,7 +22,7 @@ from io import BytesIO
 import pytest
 
 
-CFN_STACK_NAME = 'enblog'
+CFN_STACK_NAME = 'eventbridge-blog'
 
 
 logging.basicConfig(level=logging.DEBUG)
