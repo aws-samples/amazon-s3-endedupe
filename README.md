@@ -17,6 +17,20 @@ Note that this sample does not create an ordering of notifications.  Instead, it
 skips handling of a notification if it is older than one that has already
 completed.  Thus, not every update is necessarily processed.
 
+### Sample code notes
+
+The sample code; software libraries; command line tools; proofs of concept;
+templates; or other related technology (including any of the foregoing that are
+provided by our personnel) is provided to you as AWS Content under the AWS
+Customer Agreement, or the relevant written agreement between you and AWS
+(whichever applies). You should not use this AWS Content in your production
+accounts, or on production or other critical data. You are responsible for
+testing, securing, and optimizing the AWS Content, such as sample code, as
+appropriate for production grade use based on your specific quality control
+practices and standards. Deploying AWS Content may incur AWS charges for
+creating or using AWS chargeable resources, such as running Amazon EC2 instances
+or using Amazon S3 storage.”
+
 ## What's in the package
 
 This is a SAM (Serverless Application Model) application containing a full
@@ -58,7 +72,7 @@ In summary, the application consists of:
 
 ### Integration tests
 
-The integration tests are in the `endedupe-integration-tests` folder.
+The integration tests are in the `endedupe_integ_test` folder.
 
 The integration tests are a simple set of pytest tests that set up test
 scenarios by placing data in the test input bucket and then generating the event
@@ -70,7 +84,7 @@ notification handler behaves correctly.
 
 ### The sample client
 
-The sample client is in the `sample-client` folder.
+The sample client is in the `sample_client` folder.
 
 The sample client uploads a set of images to the input bucket, downloads the
 transformed outputs, and creates a montage so you can visually see the effect of
@@ -103,18 +117,58 @@ tests then you should choose this as the stack name.
 
 ### Running the integration tests
 
-The integration tests are in the `endedupe_integ_test` directory and have a separate `requirements.txt`.  You can make a virtual environment for them and run them from there, but you must first deploy the SAM application to your account.  The tests will interact with the CloudFormation stack deployed to your account and use the outputs it defines to find the test input bucket and output buckets.
+The integration tests are in the `endedupe_integ_test` directory and have a
+separate `requirements.txt`.  You can make a virtual environment for them and
+run them from there, but you must first deploy the SAM application to your
+account.  The tests will interact with the CloudFormation stack deployed to your
+account and use the outputs it defines to find the test input bucket and output
+buckets.
 
-Here's an example of how to run the tests.  Make sure that a simple `aws` CLI command works first, so you know your credentials are set up correctly (e.g. `aws s3 ls`):
+Here's an example of how to run the tests.  Make sure that a simple `aws` CLI
+command works first, so you know your credentials are set up correctly (e.g.
+`aws s3 ls`):
 
 ```sh
-python -m venv venv
+python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
 pytest
 ```
 
 ### Using the sample client
+
+The sample client demonstrates the problem and how this implementation resolves,
+as described in our blog post.  To use the sample client, you need to have
+deployed the application to your AWS account as described above, have the AWS
+CLI on your PATH, and have ImageMagick installed if you want to see the output
+montage.
+
+The shell script `sample_client/run.sh` is a wrapper that you can use to upload
+a series of images in sequence either with the locking safeguards/secondary
+index enabled or disabled to see how it can protect against unordered or
+concurrent invocations of the test lambda function.
+
+The endedupe Python virtual environment should have the needed dependencies to
+run the sample client using the "run.sh" script.  To run the sample client you
+can use the following commands, assuming you are in the root of the repository:
+
+```sh
+cd endedupe
+python3 -m venv venv
+. venv/bin/activate
+pip install -r requirements.txt
+cd ../sample_client
+./run.sh
+```
+
+The "run.sh" script uses the "montage" command from ImageMagick to create the
+montage of processed images.
+
+If you run "run.sh" without any options, you should see a montage of all cat
+images. If you add the `-n` option, with some probability, you will see a
+montage that includes some cat images.  These are always uploaded first but
+because of the order the notifications are handled can appear out-of-order in
+the output.
 
 ## How does it work?
 
@@ -141,7 +195,7 @@ hasn't been updated.  If we fail this conditional write, we retry the whole
 process.
 
 Once the lock is acquired we call the processing function that, in this case,
-reads the object as an image file, inverts its colours, and writes the result to
+reads the object as an image file, inverts its colors, and writes the result to
 an output bucket.
 
 Finally, when processing is complete, we release the lock.
@@ -183,7 +237,7 @@ the situation and potentially manually releasing the lock.
 None of these solutions are perfect and have a trade-off along the lines of
 durability/correctness vs. liveness.
 
-The incidents of problems like these can be minimised by making sure that the
+The incidents of problems like these can be minimized by making sure that the
 function timeout is long enough.  Lambda also provides a way to get an estimate
 of the time remaining before the timeout will occur (see the [documentation on
 the context
