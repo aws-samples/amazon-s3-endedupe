@@ -62,7 +62,7 @@ fi
 # Get bucket names from CloudFormation stack
 function get_param() {
     key="$1"
-    aws cloudformation describe-stacks --stack-name eventbridge-blog | \
+    aws cloudformation describe-stacks --stack-name $STACK | \
         jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "'"${key}"'").OutputValue'
 }
 INPUT_BUCKET=$(get_param InputBucketName)
