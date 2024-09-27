@@ -164,7 +164,7 @@ cd ../sample_client
 The "run.sh" script uses the "montage" command from ImageMagick to create the
 montage of processed images.
 
-If you run "run.sh" without any options, you should see a montage of all cat
+If you run "run.sh" without any options, you should see a montage of all dog
 images. If you add the `-n` option, with some probability, you will see a
 montage that includes some cat images.  These are always uploaded first but
 because of the order the notifications are handled can appear out-of-order in
